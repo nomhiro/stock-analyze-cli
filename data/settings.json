@@ -1,0 +1,8 @@
+{
+  "anomaly": {
+    "dividendYieldThreshold": 5.0,
+    "perThreshold": 50,
+    "pbrThreshold": 0.5
+  },
+  "updatedAt": ""
+}
