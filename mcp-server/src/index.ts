@@ -3,6 +3,7 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import { registerDataTools } from "./tools/data.js";
 import { registerMarketTools } from "./tools/market.js";
 import { registerPortfolioTools } from "./tools/portfolio.js";
+import { registerJudgmentTools } from "./tools/judgment.js";
 
 const server = new McpServer({
   name: "stock-analyzer",
@@ -13,6 +14,7 @@ const server = new McpServer({
 registerDataTools(server);
 registerMarketTools(server);
 registerPortfolioTools(server);
+registerJudgmentTools(server);
 
 // Stdio トランスポートで接続
 const transport = new StdioServerTransport();
