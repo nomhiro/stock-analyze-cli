@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{TITLE}}</title>
+  <style>{{BASE_CSS}}
+    .heatmap-grid { display: grid; gap: 4px; margin-top: 16px; }
+    .heatmap-cell {
+      padding: 12px 8px;
+      text-align: center;
+      border-radius: 4px;
+      font-size: 0.85em;
+      min-height: 60px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+    .heatmap-cell .label { font-weight: bold; margin-bottom: 4px; }
+    .heatmap-cell .value { font-size: 0.9em; opacity: 0.9; }
+  </style>
+</head>
+<body>
+  <h1>{{TITLE}}</h1>
+  <div id="heatmap" class="heatmap-grid"></div>
+  <script>
+    const data = {{DATA}};
+    const grid = document.getElementById('heatmap');
+    const cols = data.columns || 4;
+    grid.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
+
+    function getColor(value, min, max) {
+      const ratio = max !== min ? (value - min) / (max - min) : 0.5;
+      if (ratio >= 0.5) {
+        const g = Math.round(100 + 155 * ((ratio - 0.5) * 2));
+        return `rgba(76, ${g}, 80, 0.8)`;
+      } else {
+        const r = Math.round(100 + 155 * ((0.5 - ratio) * 2));
+        return `rgba(${r}, 67, 54, 0.8)`;
+      }
+    }
+
+    const values = data.cells.map(c => c.value);
+    const min = Math.min(...values);
+    const max = Math.max(...values);
+
+    data.cells.forEach(cell => {
+      const div = document.createElement('div');
+      div.className = 'heatmap-cell';
+      div.style.backgroundColor = getColor(cell.value, min, max);
+      div.innerHTML = `<span class="label">${cell.label}</span><span class="value">${cell.value}</span>`;
+      grid.appendChild(div);
+    });
+  </script>
+</body>
+</html>

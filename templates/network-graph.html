@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{TITLE}}</title>
+  <style>{{BASE_CSS}}
+    #network { width: 100%; height: 500px; border: 1px solid #333; border-radius: 4px; }
+  </style>
+  <script src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
+</head>
+<body>
+  <h1>{{TITLE}}</h1>
+  <div id="network"></div>
+  <script>
+    const data = {{DATA}};
+    const nodes = new vis.DataSet(data.nodes.map(n => ({
+      id: n.id,
+      label: n.label,
+      color: n.color || '#2196f3',
+      font: { color: '#e0e0e0' },
+      size: n.size || 20,
+    })));
+    const edges = new vis.DataSet(data.edges.map(e => ({
+      from: e.from,
+      to: e.to,
+      label: e.label || '',
+      color: { color: '#555', highlight: '#aaa' },
+      font: { color: '#999', size: 10 },
+      width: e.width || 1,
+    })));
+    new vis.Network(document.getElementById('network'), { nodes, edges }, {
+      physics: { stabilization: { iterations: 100 } },
+      layout: { improvedLayout: true },
+    });
+  </script>
+</body>
+</html>

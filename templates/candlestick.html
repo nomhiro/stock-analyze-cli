@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{TITLE}}</title>
+  <style>{{BASE_CSS}}</style>
+  <script src="https://unpkg.com/lightweight-charts/dist/lightweight-charts.standalone.production.js"></script>
+</head>
+<body>
+  <h1>{{TITLE}}</h1>
+  <div id="chart" class="chart-container"></div>
+  <script>
+    const data = {{DATA}};
+    const chart = LightweightCharts.createChart(document.getElementById('chart'), {
+      layout: { background: { color: '#1a1a2e' }, textColor: '#e0e0e0' },
+      grid: { vertLines: { color: '#2a2a4a' }, horzLines: { color: '#2a2a4a' } },
+      width: document.getElementById('chart').clientWidth,
+      height: 500,
+    });
+    const series = chart.addCandlestickSeries({
+      upColor: '#4caf50',
+      downColor: '#f44336',
+      borderUpColor: '#4caf50',
+      borderDownColor: '#f44336',
+      wickUpColor: '#4caf50',
+      wickDownColor: '#f44336',
+    });
+    series.setData(data);
+    chart.timeScale().fitContent();
+    window.addEventListener('resize', () => {
+      chart.applyOptions({ width: document.getElementById('chart').clientWidth });
+    });
+  </script>
+</body>
+</html>

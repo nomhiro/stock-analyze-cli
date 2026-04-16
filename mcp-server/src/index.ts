@@ -4,6 +4,7 @@ import { registerDataTools } from "./tools/data.js";
 import { registerMarketTools } from "./tools/market.js";
 import { registerPortfolioTools } from "./tools/portfolio.js";
 import { registerJudgmentTools } from "./tools/judgment.js";
+import { registerVizTools } from "./tools/viz.js";
 
 const server = new McpServer({
   name: "stock-analyzer",
@@ -15,6 +16,7 @@ registerDataTools(server);
 registerMarketTools(server);
 registerPortfolioTools(server);
 registerJudgmentTools(server);
+registerVizTools(server);
 
 // Stdio トランスポートで接続
 const transport = new StdioServerTransport();

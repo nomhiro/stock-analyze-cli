@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{TITLE}}</title>
+  <style>{{BASE_CSS}}
+    th { cursor: pointer; user-select: none; }
+    th:hover { background: #1e2d52; }
+    th .sort-arrow { margin-left: 4px; opacity: 0.5; }
+    th.sorted .sort-arrow { opacity: 1; }
+  </style>
+</head>
+<body>
+  <h1>{{TITLE}}</h1>
+  <table id="ranking">
+    <thead><tr id="header"></tr></thead>
+    <tbody id="body"></tbody>
+  </table>
+  <script>
+    const data = {{DATA}};
+    const { columns, rows } = data;
+    let sortCol = null;
+    let sortAsc = true;
+
+    function render(sortedRows) {
+      const header = document.getElementById('header');
+      header.innerHTML = '';
+      columns.forEach((col, i) => {
+        const th = document.createElement('th');
+        const arrow = sortCol === i ? (sortAsc ? ' ▲' : ' ▼') : '';
+        th.className = sortCol === i ? 'sorted' : '';
+        th.innerHTML = col.label + `<span class="sort-arrow">${arrow}</span>`;
+        th.addEventListener('click', () => {
+          if (sortCol === i) { sortAsc = !sortAsc; }
+          else { sortCol = i; sortAsc = true; }
+          sort();
+        });
+        header.appendChild(th);
+      });
+
+      const body = document.getElementById('body');
+      body.innerHTML = '';
+      sortedRows.forEach(row => {
+        const tr = document.createElement('tr');
+        columns.forEach((col, i) => {
+          const td = document.createElement('td');
+          const val = row[col.key];
+          td.textContent = val != null ? String(val) : '';
+          if (col.colorize && typeof val === 'number') {
+            td.className = val >= 0 ? 'positive' : 'negative';
+          }
+          if (col.align) td.style.textAlign = col.align;
+          tr.appendChild(td);
+        });
+        body.appendChild(tr);
+      });
+    }
+
+    function sort() {
+      if (sortCol === null) { render(rows); return; }
+      const key = columns[sortCol].key;
+      const sorted = [...rows].sort((a, b) => {
+        const va = a[key], vb = b[key];
+        if (va == null && vb == null) return 0;
+        if (va == null) return 1;
+        if (vb == null) return -1;
+        if (typeof va === 'number' && typeof vb === 'number') return sortAsc ? va - vb : vb - va;
+        return sortAsc ? String(va).localeCompare(String(vb)) : String(vb).localeCompare(String(va));
+      });
+      render(sorted);
+    }
+
+    render(rows);
+  </script>
+</body>
+</html>
