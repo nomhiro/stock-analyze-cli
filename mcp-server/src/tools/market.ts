@@ -10,6 +10,13 @@ import {
 } from "../lib/yahoo-finance.js";
 import { readJsonFile, writeJsonFile } from "../lib/json-store.js";
 import type { StockQuote } from "../types/stock.js";
+import {
+  getDisclosuresByDate,
+  getDisclosuresBySymbol,
+  getRecentDisclosures,
+} from "../lib/tdnet.js";
+import { searchCompanyCIK, getCompanyFilings } from "../lib/sec-edgar.js";
+import { searchPapers, getFieldTrend, detectCitationBurst } from "../lib/semantic-scholar.js";
 
 export function registerMarketTools(server: McpServer): void {
   server.tool(
@@ -125,6 +132,67 @@ export function registerMarketTools(server: McpServer): void {
       // Apply filter
       const filtered = applyScreeningFilter(allQuotes, { perMax, pbrMax, marketCapMin, dividendYieldMin });
       return { content: [{ type: "text" as const, text: JSON.stringify({ fromCache: false, count: filtered.length, results: filtered }, null, 2) }] };
+    },
+  );
+
+  server.tool(
+    "market_disclosures",
+    "TDnet適時開示データを取得する（日付指定、銘柄指定、または直近）",
+    {
+      symbol: z.string().optional().describe("銘柄コード（指定時はその銘柄の開示のみ）"),
+      date: z.string().optional().describe("日付（YYYYMMDD形式）"),
+      limit: z.number().optional().default(50).describe("取得件数上限"),
+    },
+    async ({ symbol, date, limit }) => {
+      let disclosures;
+      if (symbol) {
+        disclosures = await getDisclosuresBySymbol(symbol, limit);
+      } else if (date) {
+        disclosures = await getDisclosuresByDate(date, limit);
+      } else {
+        disclosures = await getRecentDisclosures(limit);
+      }
+      return { content: [{ type: "text" as const, text: JSON.stringify(disclosures, null, 2) }] };
+    },
+  );
+
+  server.tool(
+    "market_sec_filing",
+    "SEC EDGARから米国企業の開示書類（10-K/10-Q）を取得する",
+    {
+      ticker: z.string().describe("ティッカーシンボル（例: AAPL）"),
+      formType: z.enum(["10-K", "10-Q", "8-K"]).optional().describe("書類タイプ"),
+      limit: z.number().optional().default(5).describe("取得件数"),
+    },
+    async ({ ticker, formType, limit }) => {
+      const company = await searchCompanyCIK(ticker);
+      if (!company) {
+        return { content: [{ type: "text" as const, text: JSON.stringify({ error: `CIK not found for ${ticker}` }) }] };
+      }
+      const filings = await getCompanyFilings(company.cik, formType, limit);
+      return { content: [{ type: "text" as const, text: JSON.stringify({ company, filings }, null, 2) }] };
+    },
+  );
+
+  server.tool(
+    "market_paper_search",
+    "Semantic Scholarで学術論文を検索する（引用トレンド分析、Citation Burst検出）",
+    {
+      query: z.string().describe("検索クエリ"),
+      limit: z.number().optional().default(10).describe("取得件数"),
+      year: z.string().optional().describe("年範囲（例: 2020-2025）"),
+      analyzeTrend: z.boolean().optional().default(false).describe("年次引用トレンド分析を実行するか"),
+    },
+    async ({ query, limit, year, analyzeTrend }) => {
+      const results = await searchPapers(query, { limit, year });
+      let trend = null;
+      let citationBurst = null;
+      if (analyzeTrend) {
+        const currentYear = new Date().getFullYear();
+        trend = await getFieldTrend(query, currentYear - 5, currentYear);
+        citationBurst = detectCitationBurst(trend);
+      }
+      return { content: [{ type: "text" as const, text: JSON.stringify({ results, trend, citationBurst }, null, 2) }] };
     },
   );
 }

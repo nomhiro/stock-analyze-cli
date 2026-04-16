@@ -17,6 +17,26 @@ vi.mock("../lib/json-store.js", () => ({
   writeJsonFile: vi.fn(),
 }));
 
+// Mock tdnet
+vi.mock("../lib/tdnet.js", () => ({
+  getDisclosuresByDate: vi.fn(),
+  getDisclosuresBySymbol: vi.fn(),
+  getRecentDisclosures: vi.fn(),
+}));
+
+// Mock sec-edgar
+vi.mock("../lib/sec-edgar.js", () => ({
+  searchCompanyCIK: vi.fn(),
+  getCompanyFilings: vi.fn(),
+}));
+
+// Mock semantic-scholar
+vi.mock("../lib/semantic-scholar.js", () => ({
+  searchPapers: vi.fn(),
+  getFieldTrend: vi.fn(),
+  detectCitationBurst: vi.fn(),
+}));
+
 import {
   getQuote,
   getQuotes,
@@ -26,6 +46,13 @@ import {
   getSectors,
 } from "../lib/yahoo-finance.js";
 import { readJsonFile, writeJsonFile } from "../lib/json-store.js";
+import {
+  getDisclosuresByDate,
+  getDisclosuresBySymbol,
+  getRecentDisclosures,
+} from "../lib/tdnet.js";
+import { searchCompanyCIK, getCompanyFilings } from "../lib/sec-edgar.js";
+import { searchPapers, getFieldTrend, detectCitationBurst } from "../lib/semantic-scholar.js";
 import type { StockQuote } from "../types/stock.js";
 
 const mockGetQuote = vi.mocked(getQuote);
@@ -36,6 +63,14 @@ const mockGetStockFundamentals = vi.mocked(getStockFundamentals);
 const mockGetSectors = vi.mocked(getSectors);
 const mockReadJsonFile = vi.mocked(readJsonFile);
 const mockWriteJsonFile = vi.mocked(writeJsonFile);
+const mockGetDisclosuresByDate = vi.mocked(getDisclosuresByDate);
+const mockGetDisclosuresBySymbol = vi.mocked(getDisclosuresBySymbol);
+const mockGetRecentDisclosures = vi.mocked(getRecentDisclosures);
+const mockSearchCompanyCIK = vi.mocked(searchCompanyCIK);
+const mockGetCompanyFilings = vi.mocked(getCompanyFilings);
+const mockSearchPapers = vi.mocked(searchPapers);
+const mockGetFieldTrend = vi.mocked(getFieldTrend);
+const mockDetectCitationBurst = vi.mocked(detectCitationBurst);
 
 describe("registerMarketTools", () => {
   const registeredTools: Map<string, { description: string; schema: unknown; handler: Function }> = new Map();
@@ -54,8 +89,8 @@ describe("registerMarketTools", () => {
     registerMarketTools(mockServer as never);
   });
 
-  it("registers all 7 market tools", () => {
-    expect(mockServer.tool).toHaveBeenCalledTimes(7);
+  it("registers all 10 market tools", () => {
+    expect(mockServer.tool).toHaveBeenCalledTimes(10);
     expect(registeredTools.has("market_quote")).toBe(true);
     expect(registeredTools.has("market_quotes")).toBe(true);
     expect(registeredTools.has("market_search")).toBe(true);
@@ -63,6 +98,9 @@ describe("registerMarketTools", () => {
     expect(registeredTools.has("market_fundamentals")).toBe(true);
     expect(registeredTools.has("market_sectors")).toBe(true);
     expect(registeredTools.has("market_screening")).toBe(true);
+    expect(registeredTools.has("market_disclosures")).toBe(true);
+    expect(registeredTools.has("market_sec_filing")).toBe(true);
+    expect(registeredTools.has("market_paper_search")).toBe(true);
   });
 
   it("market_quote returns a single stock quote as JSON", async () => {
@@ -220,6 +258,97 @@ describe("registerMarketTools", () => {
     const parsed = JSON.parse((result as { content: Array<{ text: string }> }).content[0].text);
     expect(parsed.fromCache).toBe(true);
     expect(mockGetQuotes).not.toHaveBeenCalled();
+  });
+
+  it("market_disclosures calls getRecentDisclosures when no params", async () => {
+    const mockDisclosures = [
+      { type: "disclosure", id: "1", symbol: "7203.T", companyName: "トヨタ", title: "決算短信", documentType: "earnings", publishedAt: "2024-01-15T00:00:00Z", analyzed: false },
+    ];
+    mockGetRecentDisclosures.mockResolvedValue(mockDisclosures as never);
+
+    const handler = registeredTools.get("market_disclosures")!.handler;
+    const result = await handler({ limit: 50 });
+
+    expect(mockGetRecentDisclosures).toHaveBeenCalledWith(50);
+    const parsed = JSON.parse((result as { content: Array<{ text: string }> }).content[0].text);
+    expect(parsed).toHaveLength(1);
+    expect(parsed[0].symbol).toBe("7203.T");
+  });
+
+  it("market_disclosures calls getDisclosuresBySymbol when symbol provided", async () => {
+    mockGetDisclosuresBySymbol.mockResolvedValue([]);
+
+    const handler = registeredTools.get("market_disclosures")!.handler;
+    await handler({ symbol: "7203.T", limit: 10 });
+
+    expect(mockGetDisclosuresBySymbol).toHaveBeenCalledWith("7203.T", 10);
+  });
+
+  it("market_disclosures calls getDisclosuresByDate when date provided", async () => {
+    mockGetDisclosuresByDate.mockResolvedValue([]);
+
+    const handler = registeredTools.get("market_disclosures")!.handler;
+    await handler({ date: "20240115", limit: 20 });
+
+    expect(mockGetDisclosuresByDate).toHaveBeenCalledWith("20240115", 20);
+  });
+
+  it("market_sec_filing returns error when CIK not found", async () => {
+    mockSearchCompanyCIK.mockResolvedValue(null);
+
+    const handler = registeredTools.get("market_sec_filing")!.handler;
+    const result = await handler({ ticker: "ZZZZ", limit: 5 });
+
+    const parsed = JSON.parse((result as { content: Array<{ text: string }> }).content[0].text);
+    expect(parsed.error).toContain("CIK not found for ZZZZ");
+  });
+
+  it("market_sec_filing returns company and filings when found", async () => {
+    const company = { cik: "0000320193", entityName: "APPLE INC", ticker: "AAPL" };
+    const filings = [{ accessionNumber: "001", filingDate: "2023-11-03", reportDate: "2023-09-30", form: "10-K", primaryDocument: "doc.htm", primaryDocDescription: "Annual Report", fileUrl: "https://example.com" }];
+    mockSearchCompanyCIK.mockResolvedValue(company);
+    mockGetCompanyFilings.mockResolvedValue(filings);
+
+    const handler = registeredTools.get("market_sec_filing")!.handler;
+    const result = await handler({ ticker: "AAPL", formType: "10-K", limit: 5 });
+
+    expect(mockSearchCompanyCIK).toHaveBeenCalledWith("AAPL");
+    expect(mockGetCompanyFilings).toHaveBeenCalledWith("0000320193", "10-K", 5);
+    const parsed = JSON.parse((result as { content: Array<{ text: string }> }).content[0].text);
+    expect(parsed.company.ticker).toBe("AAPL");
+    expect(parsed.filings).toHaveLength(1);
+  });
+
+  it("market_paper_search returns search results without trend analysis", async () => {
+    const searchResult = { total: 100, offset: 0, data: [{ paperId: "abc", title: "Test Paper" }] };
+    mockSearchPapers.mockResolvedValue(searchResult as never);
+
+    const handler = registeredTools.get("market_paper_search")!.handler;
+    const result = await handler({ query: "deep learning", limit: 10, analyzeTrend: false });
+
+    expect(mockSearchPapers).toHaveBeenCalledWith("deep learning", { limit: 10, year: undefined });
+    const parsed = JSON.parse((result as { content: Array<{ text: string }> }).content[0].text);
+    expect(parsed.results.total).toBe(100);
+    expect(parsed.trend).toBeNull();
+    expect(parsed.citationBurst).toBeNull();
+  });
+
+  it("market_paper_search includes trend analysis when requested", async () => {
+    const searchResult = { total: 50, offset: 0, data: [] };
+    const trendData = [{ year: 2023, paperCount: 100, totalCitations: 500 }];
+    const burstResult = { detected: false, peakYear: null, growthRate: null };
+    mockSearchPapers.mockResolvedValue(searchResult as never);
+    mockGetFieldTrend.mockResolvedValue(trendData);
+    mockDetectCitationBurst.mockReturnValue(burstResult);
+
+    const handler = registeredTools.get("market_paper_search")!.handler;
+    const result = await handler({ query: "AI finance", limit: 5, analyzeTrend: true });
+
+    expect(mockGetFieldTrend).toHaveBeenCalled();
+    expect(mockDetectCitationBurst).toHaveBeenCalledWith(trendData);
+    const parsed = JSON.parse((result as { content: Array<{ text: string }> }).content[0].text);
+    expect(parsed.trend).toEqual(trendData);
+    expect(parsed.citationBurst).toEqual(burstResult);
   });
 
   it("market_screening fetches fresh data when no cache", async () => {
