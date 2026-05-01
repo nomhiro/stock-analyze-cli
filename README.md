@@ -37,7 +37,7 @@
 | レイヤー | 役割 | 実装 |
 |---------|------|------|
 | **Claude (Desktop / Code)** | 対話・判断・ハーネス | Claude 本体 |
-| **スキル群** | AI 分析フレームワーク（プロンプトテンプレート） | `skills/` 配下の Markdown |
+| **スキル群** | AI 分析フレームワーク（プロンプトテンプレート） | `.claude/skills/<name>/SKILL.md`（[Agent Skills 仕様](https://agentskills.io/specification)準拠） |
 | **MCP サーバー** | ファクト提供・データ永続化・可視化 | `mcp-server/` (TypeScript) |
 | **データソース** | 外部 API / ローカル JSON | 外部 API + `data/` |
 
@@ -53,7 +53,8 @@ stock-analyze-cli/
 │       ├── lib/         # 外部APIクライアント + ユーティリティ
 │       ├── tools/       # MCPツール（market/portfolio/judgment/viz/data）
 │       └── types/       # 型定義
-├── skills/              # Claude スキル定義 (Markdown)
+├── .claude/
+│   └── skills/          # Claude Code スキル定義（<name>/SKILL.md）
 ├── templates/           # 可視化HTMLテンプレート
 ├── data/                # JSONファイル（ポートフォリオ、判定キャッシュ等）
 │   ├── portfolio.json
@@ -167,7 +168,7 @@ npm run build
 }
 ```
 
-スキルは Claude Desktop の Projects 機能で `skills/` 配下のファイルをナレッジとして追加する。
+スキルは Claude Code が `.claude/skills/<name>/SKILL.md` を自動検出して `Skill` ツール経由で起動する（[Claude Code Skills 仕様](https://code.claude.com/docs/en/skills)準拠）。Claude Desktop で使う場合は同じファイルを Projects 機能のナレッジとしてアップロードする。
 
 ## コマンド
 
