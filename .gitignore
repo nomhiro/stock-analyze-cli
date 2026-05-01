@@ -4,3 +4,16 @@ output/
 .env
 *.log
 coverage/
+
+# 個人ローカル設定（Claude Code）
+.claude/settings.local.json
+.playwright-mcp/
+
+# AI 判定履歴（個人の分析データ、共有しない）
+data/judgments/
+
+# 一過性の分析スクリプト（migrate-cosmos.ts のような恒久ツールは個別に追加可）
+scripts/analyze-*.ts
+scripts/find-*.ts
+scripts/query-*.ts
+scripts/*-peers.ts
