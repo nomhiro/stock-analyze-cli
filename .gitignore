@@ -9,8 +9,15 @@ coverage/
 .claude/settings.local.json
 .playwright-mcp/
 
-# AI 判定履歴（個人の分析データ、共有しない）
-data/judgments/
+# AI 判定履歴・個人の分析データ（共有しない、.gitkeep で空ディレクトリは保持）
+data/judgments/*
+!data/judgments/.gitkeep
+data/screening/*
+!data/screening/.gitkeep
+data/sectors/*
+!data/sectors/.gitkeep
+data/growth-discovery/*
+!data/growth-discovery/.gitkeep
 
 # 一過性の分析スクリプト（migrate-cosmos.ts のような恒久ツールは個別に追加可）
 scripts/analyze-*.ts
